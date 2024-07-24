@@ -1,0 +1,56 @@
+services:
+  postgres:
+    image: postgres:12-alpine
+    ports:
+      - ${POSTGRES_PORT}:${POSTGRES_PORT}
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASS}
+    volumes:
+      - ./postgres/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
+      - ./postgres/script:/script:ro
+      - pg-data:/var/lib/postgresql/data
+
+  pgadmin:
+    image: dpage/pgadmin4:8.6
+    ports:
+      - ${PGADMIN_PORT}:${PGADMIN_PORT}
+    environment:
+      PGADMIN_LISTEN_PORT: ${PGADMIN_PORT}
+      PGADMIN_DEFAULT_EMAIL: wgprtm@gmail.com
+      PGADMIN_DEFAULT_PASSWORD: ${POSTGRES_PASS}
+    volumes:
+      - ./postgres/pgadmin4/servers.json:/pgadmin4/servers.json
+      - pg-admin-data:/var/lib/pgadmin
+    depends_on:
+      - postgres
+
+  backend:
+    image: python:3.12.3
+    working_dir: /app
+    environment:
+      DATABASE_URL: postgresql://wgprtm:${POSTGRES_PASS}@postgres:${POSTGRES_PORT}/dev
+      BACKEND_PORT: ${BACKEND_PORT}
+    command: ["./dev.sh"]
+    volumes:
+      - ./backend:/app:delegated
+      - ./setup.cfg:/app/setup.cfg:ro
+    depends_on:
+      - postgres
+
+  # frontend:
+  #   image: akvo/akvo-node-18-alpine:20230831.105309.b9593b7
+  #   working_dir: /app
+  #   environment:
+  #     FRONTEND_PORT: ${FRONTEND_PORT}
+  #     BACKEND_PORT: ${BACKEND_PORT}
+  #   ports:
+  #     - ${FRONTEND_PORT}:${FRONTEND_PORT}
+  #   command: ["./dev.sh"]
+  #   volumes:
+  #     - ./frontend:/app:delegated
+  #   depends_on:
+  #     - backend
+
+volumes:
+  pg-data:
+  pg-admin-data:
